@@ -53,11 +53,14 @@
 #include "pkt2flow.h"
 
 static uint32_t dump_allowed;
+static uint32_t dirhash = 0;
 static char *readfile = NULL;
 //char *interface = NULL;
 static char *outputdir = "pkt2flow.out";
 static pcap_t *inputp = NULL;
 struct ip_pair *pairs[HASH_TBL_SIZE];
+static char const *fformat = NULL;
+
 
 static void usage(char *progname)
 {
@@ -72,13 +75,15 @@ static void usage(char *progname)
 	fprintf(stderr, "	-v	also dump the in(v)alid TCP flows without the SYN option\n");
 	fprintf(stderr, "	-x	also dump non-UDP/non-TCP IP flows\n");
 	fprintf(stderr, "	-o	(o)utput directory\n");
+	fprintf(stderr, "	-s	number of hashed (s)ubdirs for output\n");
+	fprintf(stderr, "	-f	Directory path format (advanced; see source)\n");
 }
 
 
 static void parseargs(int argc, char *argv[])
 {
 	int opt;
-	const char *optstr = "uvxo:h";
+	const char *optstr = "uvxo:s:f:h";
 	while ((opt = getopt(argc, argv, optstr)) != -1) {
 		switch (opt) {
 		case 'h':
@@ -95,6 +100,12 @@ static void parseargs(int argc, char *argv[])
 			break;
 		case 'x':
 			dump_allowed |= DUMP_OTHER_ALLOWED;
+			break;
+		case 's':
+			dirhash = strtol(optarg, NULL, 10);
+			break;
+		case 'f':
+			fformat = optarg;
 			break;
 		default:
 			usage(argv [0]);
@@ -148,7 +159,12 @@ static char *resemble_file_path(struct pkt_dump_file *pdf)
 		break;
 	}
 
-	ret = asprintf(&outputpath, "%s/%s", outputdir, type_folder);
+	if (!fformat) {
+		fformat = dirhash ? "%1$s/%2$s/%3$d/%4$s" : "%1$s/%2$s/%4$s";
+	}
+
+	ret = asprintf(&outputpath, fformat, outputdir, type_folder,
+			       pdf->start_time % dirhash, "");
 	if (ret < 0)
 		return NULL;
 
@@ -178,8 +194,8 @@ static char *resemble_file_path(struct pkt_dump_file *pdf)
 	free(cwd);
 	free(outputpath);
 
-	ret = asprintf(&outputpath, "%s/%s/%s", outputdir, type_folder,
-		       pdf->file_name);
+	ret = asprintf(&outputpath, fformat, outputdir, type_folder,
+			       pdf->start_time % dirhash, pdf->file_name);
 	if (ret < 0)
 		return NULL;
 
