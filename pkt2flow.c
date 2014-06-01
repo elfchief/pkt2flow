@@ -60,6 +60,7 @@ static char *outputdir = "pkt2flow.out";
 static pcap_t *inputp = NULL;
 struct ip_pair *pairs[HASH_TBL_SIZE];
 static char const *fformat = NULL;
+static unsigned long seq = 0;
 
 
 static void usage(char *progname)
@@ -164,7 +165,7 @@ static char *resemble_file_path(struct pkt_dump_file *pdf)
 	}
 
 	ret = asprintf(&outputpath, fformat, outputdir, type_folder,
-			       pdf->start_time % dirhash, "");
+			       pdf->sequence % dirhash, "");
 	if (ret < 0)
 		return NULL;
 
@@ -195,7 +196,7 @@ static char *resemble_file_path(struct pkt_dump_file *pdf)
 	free(outputpath);
 
 	ret = asprintf(&outputpath, fformat, outputdir, type_folder,
-			       pdf->start_time % dirhash, pdf->file_name);
+			       pdf->sequence % dirhash, pdf->file_name);
 	if (ret < 0)
 		return NULL;
 
@@ -433,6 +434,7 @@ static void process_trace(void)
 			fname = new_file_name(af_6tuple, hdr.ts.tv_sec);
 			pair->pdf.file_name = fname;
 			pair->pdf.start_time = hdr.ts.tv_sec;
+			pair->pdf.sequence = seq++;
 		} else {
 			if (hdr.ts.tv_sec - pair->pdf.start_time >= FLOW_TIMEOUT) {
 				// Rest the pair to start a new flow with the same 6-tuple, but with

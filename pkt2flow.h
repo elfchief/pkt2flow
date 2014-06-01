@@ -66,6 +66,7 @@ struct pkt_dump_file {
 
 	enum pkt_dump_file_status status;
 	unsigned long start_time;
+	unsigned long sequence;
 };
 
 union ip_address {
